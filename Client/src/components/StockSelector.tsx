@@ -14,7 +14,7 @@ const stockList = Object.entries(nseStocks).map(([name, symbol]) => ({
 const StockSelector = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string } | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<any>(null); // Changed to any to hold parsed data
+  const [analysisResult, setAnalysisResult] = useState<any>(null); // direct JSON object
   const [loading, setLoading] = useState(false);
   const [showAllStocks, setShowAllStocks] = useState(false);
   const { toast } = useToast();
@@ -65,9 +65,8 @@ const StockSelector = () => {
         throw new Error(data.error || 'Failed to analyze stock');
       }
       
-      // Parse the structured analysis result
-      const result = parseAnalysisResult(data.data.analysis_result);
-      setAnalysisResult(result);
+      // Directly use structured JSON from backend
+      setAnalysisResult(data.data.analysis_result);
       
       toast({
         title: "Analysis complete",
@@ -83,69 +82,6 @@ const StockSelector = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Function to parse the structured analysis result
-  const parseAnalysisResult = (result: string) => {
-    // Split the response into lines
-    const lines = result.split('\n');
-    
-    // Initialize variables for parsed data
-    let analysisDate = '';
-    let stockSymbol = '';
-    let currentPrice = '';
-    let targetPrice = '';
-    let supportPrice = '';
-    let recommendation = '';
-    let timeFrame = '';
-    let rationale = '';
-
-    // Skip the introductory lines and start parsing from the structured data
-    let startParsing = false;
-    for (const line of lines) {
-      // Start parsing when we encounter the "Date:" line (first structured line)
-      if (line.startsWith('Date:')) {
-        startParsing = true;
-      }
-      if (!startParsing) continue;
-
-      // Parse each line based on the label
-      if (line.startsWith('Date:')) {
-        analysisDate = line.replace('Date:', '').trim();
-      }
-      if (line.startsWith('Stock Symbol:')) {
-        stockSymbol = line.replace('Stock Symbol:', '').trim();
-      }
-      if (line.startsWith('Current Price:')) {
-        currentPrice = line.replace('Current Price:', '').trim();
-      }
-      if (line.startsWith('Target Price:')) {
-        targetPrice = line.replace('Target Price:', '').trim();
-      }
-      if (line.startsWith('Support Price:')) {
-        supportPrice = line.replace('Support Price:', '').trim();
-      }
-      if (line.startsWith('Recommendation:')) {
-        recommendation = line.replace('Recommendation:', '').trim();
-      }
-      if (line.startsWith('Time Frame:')) {
-        timeFrame = line.replace('Time Frame:', '').trim();
-      }
-      if (line.startsWith('Rationale:')) {
-        rationale = line.replace('Rationale:', '').trim();
-      }
-    }
-
-    return {
-      analysisDate,
-      stockSymbol,
-      currentPrice,
-      targetPrice,
-      supportPrice,
-      recommendation,
-      timeFrame,
-      rationale
-    };
   };
 
   return (
@@ -263,7 +199,7 @@ const StockSelector = () => {
               <CardContent className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <h4 className="text-lg font-semibold">NSE: {analysisResult.stockSymbol}</h4>
+                    <h4 className="text-lg font-semibold">{analysisResult.stockSymbol}</h4>
                     <p className="text-sm text-gray-400">{analysisResult.analysisDate}</p>
                   </div>
                   <p className="text-xl font-bold">{analysisResult.currentPrice}</p>

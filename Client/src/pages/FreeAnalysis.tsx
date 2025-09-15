@@ -82,9 +82,8 @@ const FreeAnalysis = () => {
         throw new Error(data.error || 'Failed to analyze stock');
       }
 
-      // Parse the structured analysis result
-      const result = parseAnalysisResult(data.data.analysis_result);
-      setAnalysisResult(result);
+      // Directly use structured JSON from backend
+      setAnalysisResult(data.data.analysis_result);
       
       const newRemainingRequests = requestsRemaining - 1;
       setRequestsRemaining(newRemainingRequests);
@@ -106,68 +105,6 @@ const FreeAnalysis = () => {
     }
   };
 
-  // Function to parse the structured analysis result
-  const parseAnalysisResult = (result: string) => {
-    // Split the response into lines
-    const lines = result.split('\n');
-    
-    // Initialize variables for parsed data
-    let analysisDate = '';
-    let stockSymbol = '';
-    let currentPrice = '';
-    let targetPrice = '';
-    let supportPrice = '';
-    let recommendation = '';
-    let timeFrame = '';
-    let rationale = '';
-
-    // Skip the introductory lines and start parsing from the structured data
-    let startParsing = false;
-    for (const line of lines) {
-      // Start parsing when we encounter the "Date:" line (first structured line)
-      if (line.startsWith('Date:')) {
-        startParsing = true;
-      }
-      if (!startParsing) continue;
-
-      // Parse each line based on the label
-      if (line.startsWith('Date:')) {
-        analysisDate = line.replace('Date:', '').trim();
-      }
-      if (line.startsWith('Stock Symbol:')) {
-        stockSymbol = line.replace('Stock Symbol:', '').trim();
-      }
-      if (line.startsWith('Current Price:')) {
-        currentPrice = line.replace('Current Price:', '').trim();
-      }
-      if (line.startsWith('Target Price:')) {
-        targetPrice = line.replace('Target Price:', '').trim();
-      }
-      if (line.startsWith('Support Price:')) {
-        supportPrice = line.replace('Support Price:', '').trim();
-      }
-      if (line.startsWith('Recommendation:')) {
-        recommendation = line.replace('Recommendation:', '').trim();
-      }
-      if (line.startsWith('Time Frame:')) {
-        timeFrame = line.replace('Time Frame:', '').trim();
-      }
-      if (line.startsWith('Rationale:')) {
-        rationale = line.replace('Rationale:', '').trim();
-      }
-    }
-
-    return {
-      analysisDate,
-      stockSymbol,
-      currentPrice,
-      targetPrice,
-      supportPrice,
-      recommendation,
-      timeFrame,
-      rationale
-    };
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white">

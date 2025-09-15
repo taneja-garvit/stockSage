@@ -7,24 +7,21 @@ import { Search, CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import nseStocks from '../components/nse.json';
 
-// Convert nseStocks object into an array
 const allStocks = Object.entries(nseStocks).map(([name, symbol]) => ({
   symbol,
   name
 }));
 
-// Select only a few stocks to show initially (first 6)
 const initialPopularStocks = allStocks.slice(0, 6);
 
 const FreeAnalysis = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string } | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<any>(null); // Holds parsed data
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [requestsRemaining, setRequestsRemaining] = useState(5);
   const { toast } = useToast();
 
-  // Load remaining requests from localStorage on component mount
   useEffect(() => {
     const remaining = localStorage.getItem('freeRequestsRemaining');
     if (remaining !== null) {
@@ -34,7 +31,6 @@ const FreeAnalysis = () => {
     }
   }, []);
 
-  // Filter stocks based on search query
   const filteredStocks = searchQuery.length > 0
     ? allStocks.filter(stock => 
         stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -68,12 +64,8 @@ const FreeAnalysis = () => {
     try {
       const response = await fetch(`${backend}/free-query`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          stock_name: selectedStock.symbol
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock_name: selectedStock.symbol })
       });
       
       const data = await response.json();
@@ -82,9 +74,12 @@ const FreeAnalysis = () => {
         throw new Error(data.error || 'Failed to analyze stock');
       }
 
-      // Directly use structured JSON from backend
-      setAnalysisResult(data.data.analysis_result);
-      
+      // ✅ Fix: Handle both wrapped & direct responses safely
+      const result = data?.data?.analysis_result || data?.analysis_result || null;
+      if (!result) throw new Error("Invalid analysis result");
+
+      setAnalysisResult(result);
+
       const newRemainingRequests = requestsRemaining - 1;
       setRequestsRemaining(newRemainingRequests);
       localStorage.setItem('freeRequestsRemaining', newRemainingRequests.toString());
@@ -105,25 +100,32 @@ const FreeAnalysis = () => {
     }
   };
 
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white">
       <div className="container mx-auto py-12 px-4">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold mb-4">Free Stock Analysis</h1>
-            <p className="text-gray-300 mb-6">Try our AI-powered stock analysis without signing up. You have {requestsRemaining} free requests remaining.</p>
+            <p className="text-gray-300 mb-6">
+              Try our AI-powered stock analysis without signing up. 
+              You have {requestsRemaining} free requests remaining.
+            </p>
             {requestsRemaining <= 2 && (
               <div className="bg-[#2d3748] rounded-lg p-4 flex gap-3 items-center mb-6">
                 <AlertCircle className="h-5 w-5 text-yellow-400" />
                 <p className="text-sm">
-                  Running low on free requests! <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link> for unlimited analyses.
+                  Running low on free requests!{" "}
+                  <Link to="/signup" className="text-primary hover:underline font-medium">
+                    Sign up
+                  </Link>{" "}
+                  for unlimited analyses.
                 </p>
               </div>
             )}
           </div>
           
           <div className="space-y-6 bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-xl p-6 shadow-lg">
+            {/* 🔎 Stock Search Input */}
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -134,6 +136,7 @@ const FreeAnalysis = () => {
               />
             </div>
             
+            {/* 🔎 Search Dropdown */}
             {searchQuery.length > 0 && (
               <Card className="overflow-hidden bg-gray-700 border-gray-600 max-h-64 overflow-y-auto">
                 <CardContent className="p-0">
@@ -164,6 +167,7 @@ const FreeAnalysis = () => {
               </Card>
             )}
             
+            {/* ⭐ Popular Stocks */}
             {!searchQuery.length && !selectedStock && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-full mb-2">
@@ -182,6 +186,7 @@ const FreeAnalysis = () => {
               </div>
             )}
             
+            {/* 📊 Selected Stock + Analysis */}
             {selectedStock && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -199,6 +204,7 @@ const FreeAnalysis = () => {
                   </Button>
                 </div>
                 
+                {/* 🔘 Analyze Button */}
                 <Button 
                   onClick={handleAnalyzeStock} 
                   disabled={loading || requestsRemaining <= 0} 
@@ -216,6 +222,7 @@ const FreeAnalysis = () => {
                   )}
                 </Button>
                 
+                {/* ⚠️ No Requests Left */}
                 {requestsRemaining <= 0 && !analysisResult && (
                   <div className="text-center mt-6">
                     <p className="text-sm text-gray-300 mb-3">No free requests remaining</p>
@@ -227,39 +234,56 @@ const FreeAnalysis = () => {
                   </div>
                 )}
                 
+                {/* ✅ Analysis Result */}
                 {analysisResult && (
                   <Card className="mt-4 bg-[#1a2b3d] text-white border-none shadow-lg">
                     <CardContent className="p-6">
                       <div className="flex justify-between items-center mb-4">
                         <div>
-                          <h4 className="text-lg font-semibold">NSE: {analysisResult.stockSymbol}</h4>
-                          <p className="text-sm text-gray-400">{analysisResult.analysisDate}</p>
+                          <h4 className="text-lg font-semibold">
+                            NSE: {analysisResult.stockSymbol || selectedStock.symbol}
+                          </h4>
+                          <p className="text-sm text-gray-400">
+                            {analysisResult.analysisDate || "Date not available"}
+                          </p>
                         </div>
-                        <p className="text-xl font-bold">{analysisResult.currentPrice}</p>
+                        <p className="text-xl font-bold">
+                          {analysisResult.currentPrice || "N/A"}
+                        </p>
                       </div>
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="bg-gray-800 p-4 rounded-lg">
                           <p className="text-sm text-gray-300">Target Price</p>
-                          <p className="text-lg font-semibold text-blue-400">{analysisResult.targetPrice}</p>
+                          <p className="text-lg font-semibold text-blue-400">
+                            {analysisResult.targetPrice || "N/A"}
+                          </p>
                         </div>
                         <div className="bg-gray-800 p-4 rounded-lg">
                           <p className="text-sm text-gray-300">Support Price</p>
-                          <p className="text-lg font-semibold text-red-400">{analysisResult.supportPrice}</p>
+                          <p className="text-lg font-semibold text-red-400">
+                            {analysisResult.supportPrice || "N/A"}
+                          </p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="bg-gray-800 p-4 rounded-lg">
                           <p className="text-sm text-gray-300">Recommendation</p>
-                          <p className="text-lg font-semibold">{analysisResult.recommendation}</p>
+                          <p className="text-lg font-semibold">
+                            {analysisResult.recommendation || "N/A"}
+                          </p>
                         </div>
                         <div className="bg-gray-800 p-4 rounded-lg">
                           <p className="text-sm text-gray-300">Time Frame</p>
-                          <p className="text-lg font-semibold">{analysisResult.timeFrame}</p>
+                          <p className="text-lg font-semibold">
+                            {analysisResult.timeFrame || "N/A"}
+                          </p>
                         </div>
                       </div>
                       <div className="mb-4">
                         <h5 className="text-sm font-semibold mb-2">Analysis Summary</h5>
-                        <p className="text-sm text-gray-300">{analysisResult.rationale}</p>
+                        <p className="text-sm text-gray-300">
+                          {analysisResult.rationale || "No summary available"}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -267,6 +291,7 @@ const FreeAnalysis = () => {
               </div>
             )}
             
+            {/* 🚪 SignUp / Login CTA */}
             <div className="border-t border-gray-600 pt-6 mt-8">
               <p className="text-sm text-gray-300 mb-4">
                 Want unlimited stock analyses and personalized recommendations?
@@ -288,3 +313,4 @@ const FreeAnalysis = () => {
 };
 
 export default FreeAnalysis;
+  
